@@ -3,13 +3,19 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Движение игрока")]
-    public float movementSpeed = 5.0f, mouseSensitivity = 2.0f, jumpForce = 2.0f, gravity = 9.81f, verticalRotation = 0f;
+    public float movementSpeed = 5f, mouseSensitivity = 2f, jumpForce = 1.75f, gravity = 9.81f, verticalRotation = 0f;
     public Transform playerCamera;
     private CharacterController controller;
     private Vector3 velocity;
     private bool isGrounded;
     [Header("Приседание")]
-    public float crouchHeight = 1.0f, standingHeight = 2.0f, crouchSpeed = 2.5f;
+    public float crouchHeight = 1f, standingHeight = 2f, crouchSpeed = 2.5f;
+    [Header("Шаги")]
+    public AudioSource leftFootSound, rightFootSound;
+    public AudioClip[] footstepSounds;
+    public float footstepInterval = 0.5f;
+    private float nextFootstepTime;
+    private bool isLeftFootstep = true;
 
     void Start() {
         controller = GetComponent<CharacterController>();
@@ -23,7 +29,17 @@ public class PlayerMovement : MonoBehaviour
         float horizontalInput = Input.GetAxis("Horizontal"), verticalInput = Input.GetAxis("Vertical");
         Vector3 movement = transform.right * horizontalInput + transform.forward * verticalInput;
         movement.y = 0;
+        HandeControl(movement);
 
+        if (isGrounded && controller.velocity.magnitude > 0.1f && Time.time >= nextFootstepTime) {
+            FootstepsSound();
+            nextFootstepTime = Time.time + footstepInterval;
+        }
+
+        velocity.y -= gravity * Time.deltaTime;
+        controller.Move(velocity * Time.deltaTime);
+    }
+    void HandeControl(Vector3 movement) {
         if (Input.GetKey(KeyCode.LeftControl)) {
             controller.height = Mathf.Lerp(controller.height, crouchHeight, Time.deltaTime * 10);
             movementSpeed = crouchSpeed;
@@ -42,8 +58,11 @@ public class PlayerMovement : MonoBehaviour
             verticalRotation = Mathf.Clamp(verticalRotation, -60f, 60f);
             playerCamera.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
         }
-
-        velocity.y -= gravity * Time.deltaTime;
-        controller.Move(velocity * Time.deltaTime);
+    }
+    void FootstepsSound() {
+        AudioClip footstepClip = footstepSounds[Random.Range(0, footstepSounds.Length)];
+        if (isLeftFootstep) leftFootSound.PlayOneShot(footstepClip);
+        else rightFootSound.PlayOneShot(footstepClip);
+        isLeftFootstep = !isLeftFootstep;
     }
 }
